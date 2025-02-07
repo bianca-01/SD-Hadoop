@@ -20,6 +20,12 @@ public class WordCount {
         OutputCollector<LongWritable, Text> output, Reporter reporter)
             throws IOException {
                 String[] tokens = value.toString().split("\\s");
+                
+
+                if (tokens.length < 5) {
+                    return; // Ignora a linha se não tiver elementos suficientes
+                }    
+
                 if (tokens[0].charAt(0) != '#') {
                     Long machine = new Long(tokens[1]);
                     if (tokens[2].equals("1")) {
