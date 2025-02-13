@@ -7,7 +7,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapred.*;
 
-public class WordCount2 {
+public class WordCount {
 
     public static class Map extends MapReduceBase implements 
     Mapper<LongWritable, Text, LongWritable, Text> {
@@ -47,7 +47,7 @@ public class WordCount2 {
                 long totalTime = 0;
                 long traceStart = Long.MAX_VALUE;
                 long traceEnd = 0;
-                HashSet<Long> activeDays = new HashSet<>();
+                HashSet<Long> activeDays = new HashSet<Long>();
 
                 while (values.hasNext()) {
                     String line = values.next().toString();
