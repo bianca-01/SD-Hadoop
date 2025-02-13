@@ -1,7 +1,6 @@
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.HashSet;
-import java.util.StringTokenizer;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.*;
@@ -44,40 +43,49 @@ public class WordCount {
         OutputCollector<LongWritable, Text> output, Reporter reporter)
             throws IOException {
 
-                long totalTime = 0;
-                long traceStart = Long.MAX_VALUE;
-                long traceEnd = 0;
-                HashSet<Long> activeDays = new HashSet<>();
+                long totalTime = 0; // Tempo total que a máquina ficou ligada
+                long traceStart = Long.MAX_VALUE; // Tempo de início mais antigo
+                long traceEnd = 0; // Tempo de término mais recente
+                HashSet<Long> activeDays = new HashSet<>(); // Dias únicos em que a máquina esteve ativa
 
-               while (values.hasNext()) {
-                String line = values.next().toString();
-                String[] tokens = line.split(":");
-                
-                // Convertendo para double e depois para long para lidar com números decimais
-                long start = (long) Double.parseDouble(tokens[0]);
-                long end = (long) Double.parseDouble(tokens[1]);
-            
-                if (start < traceStart) {
-                    traceStart = start;
-                }
-                if (end > traceEnd) {
-                    traceEnd = end;
-                }
-                totalTime += (end - start);
-                
-                // Armazena os dias únicos em que a máquina esteve ativa
-                long day = start / (24 * 60 * 60); // Convertendo timestamp para dia
-                activeDays.add(day);
+                while (values.hasNext()) {
+                    String line = values.next().toString();
+                    String[] tokens = line.split(":");
+                    
+                    // Convertendo os timestamps para long (truncando a parte decimal)
+                    long start = (long) Double.parseDouble(tokens[0]);
+                    long end = (long) Double.parseDouble(tokens[1]);
+
+                    // Atualiza o tempo de início e término do trace
+                    if (start < traceStart) {
+                        traceStart = start;
+                    }
+                    if (end > traceEnd) {
+                        traceEnd = end;
+                    }
+
+                    // Soma o tempo total que a máquina ficou ligada
+                    totalTime += (end - start);
+
+                    // Calcula o dia em que a máquina esteve ativa
+                    long day = start / (24 * 60 * 60); // Convertendo timestamp para dia
+                    activeDays.add(day);
                 }
 
+                // Calcula o número de dias únicos em que a máquina esteve ativa
                 int totalDaysActive = activeDays.size();
+
+                // Calcula o tempo médio por dia (em segundos)
                 double avgTimePerDay = totalTime / (double) totalDaysActive;
 
+                // Verifica se a máquina esteve ativa por 300 dias ou mais e se o tempo médio é >= 1 hora (3600 segundos)
                 if (totalDaysActive >= 300 && avgTimePerDay >= 3600) {
                     val.set("OK " + totalTime + " " + traceStart + " " + traceEnd);
                 } else {
                     val.set("NOK " + totalTime + " " + traceStart + " " + traceEnd);
                 }
+
+                // Emite o resultado
                 output.collect(key, val);
         }
     }
