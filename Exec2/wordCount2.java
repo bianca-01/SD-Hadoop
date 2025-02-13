@@ -7,7 +7,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapred.*;
 
-public class WordCount2   {
+public class WordCount2 {
 
     public static class Map extends MapReduceBase implements 
     Mapper<LongWritable, Text, LongWritable, Text> {
@@ -52,8 +52,8 @@ public class WordCount2   {
                 while (values.hasNext()) {
                     String line = values.next().toString();
                     String[] tokens = line.split(":");
-                    long start = Long.parseLong(tokens[0]);
-                    long end = Long.parseLong(tokens[1]);
+                    long start = (long) Double.parseDouble(tokens[0]); // Convertendo corretamente
+                    long end = (long) Double.parseDouble(tokens[1]);   // Arredondando valores
 
                     if (start < traceStart) {
                         traceStart = start;
