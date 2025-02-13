@@ -1,118 +1,152 @@
 import java.io.IOException;
 import java.util.Iterator;
-import java.util.HashSet;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapred.*;
 
-public class WordCount {
+// INFO - A Classe Foi refatorada com o seguinte requisitos
 
-    public static class Map extends MapReduceBase implements 
-    Mapper<LongWritable, Text, LongWritable, Text> {
+// - Ver
+public class WordCount2 {
 
-        private LongWritable k = new LongWritable();
-        private Text v = new Text();
+    /**
+     * Maper do registro de entrada e saida
+     */
+    public static class Map extends MapReduceBase implements Mapper<LongWritable, Text, Text, LongWritable> {
 
-        public void map(LongWritable key, Text value,
-        OutputCollector<LongWritable, Text> output, Reporter reporter)
-            throws IOException {
-                String[] tokens = value.toString().split("\\s");
-                
-                if (tokens.length < 5) {
-                    return; // Ignora a linha se não tiver elementos suficientes
-                }    
+        private final Text machineName = new Text();
+        private final LongWritable duration = new LongWritable();
 
-                if (tokens[0].charAt(0) != '#') {
-                    Long machine = Long.parseLong(tokens[1]);
-                    if (tokens[2].equals("1")) {
-                        k.set(machine);
-                        v.set(tokens[3] + ":" + tokens[4]);
-                        output.collect(k, v);
-                    }
-                }
+        /**
+         * Processa cada linha da entrada e emite os tempos de atividade das máquinas.
+         */
+        @Override
+        public void map(LongWritable key, Text value, OutputCollector<Text, LongWritable> output, Reporter reporter)
+                throws IOException {
+            String[] tokens = value.toString().split("\\s");
+            if (isValidEntry(tokens)) {
+                processEntry(tokens, output);
+            }
+        }
+
+        /**
+         * Verifica se a entrada é válida (tem pelo menos 5 colunas e não começa com '#').
+         */
+        private boolean isValidEntry(String[] tokens) {
+            return tokens.length >= 5 && tokens[0].charAt(0) != '#';
+        }
+
+        /**
+         * Processa a entrada e emite os tempos de atividade das máquinas ligadas.
+         */
+        private void processEntry(String[] tokens, OutputCollector<Text, LongWritable> output) throws IOException {
+            String nodeName = tokens[1];
+            if (tokens[2].equals("1")) { // INFO: aqui ta verificando apenas máquinas ligadas
+                long timeOn = calculateTimeOn(tokens);
+                machineName.set(nodeName);
+                duration.set(timeOn);
+                output.collect(machineName, duration);
+            }
+        }
+
+        /**
+         * Calcula o tempo de atividade da máquina (diferença entre horário final e inicial).
+         */
+        private long calculateTimeOn(String[] tokens) {
+            long startTime = Long.parseLong(tokens[3]);
+            long endTime = Long.parseLong(tokens[4]);
+            return endTime - startTime;
         }
     }
 
-    public static class Reduce extends MapReduceBase
-    implements Reducer<LongWritable, Text, LongWritable, Text> {
-    
-        private Text val = new Text();
+    /**
+     * Agrega os tempos de atividade e calcula a média diária.
+     */
+    public static class Reduce extends MapReduceBase implements Reducer<Text, LongWritable, Text, Text> {
 
-        public void reduce(LongWritable key, Iterator<Text> values,
-        OutputCollector<LongWritable, Text> output, Reporter reporter)
-            throws IOException {
+        /**
+         * Responsavel por reduzri os valores, calcula a média de horas por dia e filtra os resultados.
+         */
+        @Override
+        public void reduce(Text key, Iterator<LongWritable> values, OutputCollector<Text, Text> output, Reporter reporter)
+                throws IOException {
+            MachineStats stats = calculateStats(values);
+            if (shouldOutput(stats)) {
+                output.collect(key, new Text(stats.formatResult()));
+            }
+        }
 
-                long totalTime = 0; // Tempo total que a máquina ficou ligada
-                long traceStart = Long.MAX_VALUE; // Tempo de início mais antigo
-                long traceEnd = 0; // Tempo de término mais recente
-                HashSet<Long> activeDays = new HashSet<>(); // Dias únicos em que a máquina esteve ativa
+        /**
+         * Calcula estatísticas do tempo total de atividade e a média de horas por dia.
+         */
+        private MachineStats calculateStats(Iterator<LongWritable> values) {
+            long totalUptime = 0;
+            int daysActive = 0;
+            while (values.hasNext()) {
+                totalUptime += values.next().get();
+                daysActive++;
+            }
+            // aqui tem o calculo do averege por dia aqui temos o status da maquina de status passando para o metodo do retorno o uptimeTotal , dias ativos e o avrg por dia
+            double avgPerDay = (daysActive > 0) ? (totalUptime / (double) daysActive) / 3600 : 0;
+            return new MachineStats(totalUptime, daysActive, avgPerDay);
+        }
 
-                while (values.hasNext()) {
-                    String line = values.next().toString();
-                    String[] tokens = line.split(":");
-                    
-                    // Convertendo os timestamps para long (truncando a parte decimal)
-                    long start = (long) Double.parseDouble(tokens[0]);
-                    long end = (long) Double.parseDouble(tokens[1]);
-
-                    // Atualiza o tempo de início e término do trace
-                    if (start < traceStart) {
-                        traceStart = start;
-                    }
-                    if (end > traceEnd) {
-                        traceEnd = end;
-                    }
-
-                    // Soma o tempo total que a máquina ficou ligada
-                    totalTime += (end - start);
-
-                    // Calcula o dia em que a máquina esteve ativa
-                    long day = start / (24 * 60 * 60); // Convertendo timestamp para dia
-                    activeDays.add(day);
-                }
-
-                // Calcula o número de dias únicos em que a máquina esteve ativa
-                int totalDaysActive = activeDays.size();
-
-                // Calcula o tempo médio por dia (em segundos)
-                double avgTimePerDay = totalTime / (double) totalDaysActive;
-
-                // Verifica se a máquina esteve ativa por 300 dias ou mais e se o tempo médio é >= 1 hora (3600 segundos)
-                if (totalDaysActive >= 300 && avgTimePerDay >= 3600) {
-                    val.set("OK " + totalTime + " " + traceStart + " " + traceEnd);
-                } else {
-                    val.set("NOK " + totalTime + " " + traceStart + " " + traceEnd);
-                }
-
-                // Emite o resultado
-                output.collect(key, val);
+        /**
+         * Determina se a máquina deve ser incluída no resultado final (mínimo de 300 dias e média ≥ 1h/dia).
+         */
+        private boolean shouldOutput(MachineStats stats) {
+            return stats.daysActive >= 300 && stats.avgPerDay >= 1;
         }
     }
 
-    public static void main (String[] args) throws Exception {
+    /**
+     * Classe auxiliar para armazenar estatísticas do tempo de atividade das máquinas.
+     */
+    private static class MachineStats {
+        int daysActive;
+        double avgPerDay;
+
+        MachineStats(long totalUptime, int daysActive, double avgPerDay) {
+            this.daysActive = daysActive;
+            this.avgPerDay = avgPerDay;
+        }
+
+        /**
+         * Formata o resultado para exibição.
+         */
+        String formatResult() {
+            return String.format("Média: %.2f horas/dia, Dias Ativos: %d", avgPerDay, daysActive);
+        }
+    }
+
+    /**
+     * Método principal que configura e executa o job MapReduce.
+     */
+    public static void main(String[] args) throws Exception {
         if (args.length < 3) {
             System.err.println("Uso: WordCount <input path> <output path> <num reducers>");
             System.exit(1);
-        }
+        }   
 
-        JobConf conf = new JobConf(WordCount.class);
-        conf.setJobName("tempocount");
+        JobConf conf = configureJob(args);
+        JobClient.runJob(conf);
+    }
 
+    /**
+     *Main com a config de parâmetros do job -===== Aqui é a main do projeto executar ele vai executar o processo .
+     */
+    private static JobConf configureJob(String[] args) {
+        JobConf conf = new JobConf(WordCount2.class);
+        conf.setJobName("machine-uptime-analysis");
         conf.setNumReduceTasks(Integer.parseInt(args[2]));
-
-        conf.setOutputKeyClass(LongWritable.class);
-        conf.setOutputValueClass(Text.class);
-
+        conf.setOutputKeyClass(Text.class);
+        conf.setOutputValueClass(LongWritable.class);
         conf.setMapperClass(Map.class);
         conf.setReducerClass(Reduce.class);
-
         conf.setInputFormat(TextInputFormat.class);
         conf.setOutputFormat(TextOutputFormat.class);
-
         FileInputFormat.setInputPaths(conf, new Path(args[0]));
         FileOutputFormat.setOutputPath(conf, new Path(args[1]));
-
-        JobClient.runJob(conf);
+        return conf;
     }
 }
