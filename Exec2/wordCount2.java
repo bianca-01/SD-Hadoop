@@ -52,8 +52,8 @@ public class WordCount2 {
                 while (values.hasNext()) {
                     String line = values.next().toString();
                     String[] tokens = line.split(":");
-                    long start = (long) Double.parseDouble(tokens[0]); // Convertendo corretamente
-                    long end = (long) Double.parseDouble(tokens[1]);   // Arredondando valores
+                    long start = Math.round(Double.parseDouble(tokens[0])); // Convertendo corretamente
+                    long end = Math.round(Double.parseDouble(tokens[1]));   // Arredondando valores
 
                     if (start < traceStart) {
                         traceStart = start;
