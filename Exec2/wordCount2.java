@@ -7,7 +7,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapred.*;
 
-public class WordCount {
+public class WordCount2   {
 
     public static class Map extends MapReduceBase implements 
     Mapper<LongWritable, Text, LongWritable, Text> {
