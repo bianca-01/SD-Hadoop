@@ -7,7 +7,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapred.*;
 
-public class WordCount2 {
+public class WordCount {
 
     public static class Map extends MapReduceBase implements 
     Mapper<LongWritable, Text, LongWritable, Text> {
@@ -47,25 +47,27 @@ public class WordCount2 {
                 long totalTime = 0;
                 long traceStart = Long.MAX_VALUE;
                 long traceEnd = 0;
-                HashSet<Long> activeDays = new HashSet<Long>();
+                HashSet<Long> activeDays = new HashSet<>();
 
-                while (values.hasNext()) {
-                    String line = values.next().toString();
-                    String[] tokens = line.split(":");
-                    long start = Math.round(Double.parseDouble(tokens[0])); // Convertendo corretamente
-                    long end = Math.round(Double.parseDouble(tokens[1]));   // Arredondando valores
-
-                    if (start < traceStart) {
-                        traceStart = start;
-                    }
-                    if (end > traceEnd) {
-                        traceEnd = end;
-                    }
-                    totalTime += (end - start);
-                    
-                    // Armazena os dias únicos em que a máquina esteve ativa
-                    long day = start / (24 * 60 * 60); // Convertendo timestamp para dia
-                    activeDays.add(day);
+               while (values.hasNext()) {
+                String line = values.next().toString();
+                String[] tokens = line.split(":");
+                
+                // Convertendo para double e depois para long para lidar com números decimais
+                long start = (long) Double.parseDouble(tokens[0]);
+                long end = (long) Double.parseDouble(tokens[1]);
+            
+                if (start < traceStart) {
+                    traceStart = start;
+                }
+                if (end > traceEnd) {
+                    traceEnd = end;
+                }
+                totalTime += (end - start);
+                
+                // Armazena os dias únicos em que a máquina esteve ativa
+                long day = start / (24 * 60 * 60); // Convertendo timestamp para dia
+                activeDays.add(day);
                 }
 
                 int totalDaysActive = activeDays.size();
