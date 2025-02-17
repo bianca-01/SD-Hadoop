@@ -66,10 +66,7 @@ public class MachineUptime {
             if (totalDays >= 300 && avgTimePerDay >= 3600) {
                 output.collect(key, new Text(machineName + " | Tempo médio: " + (avgTimePerDay / 3600) + " horas/dia | Dias ativos: " + totalDays
                         + " | Tempo de início: " + totalStartTime + " | Tempo de fim: " + totalEndTime));
-            } else {
-                output.collect(key, new Text(machineName + " | Fora do intervalo | Tempo médio: " + (avgTimePerDay / 3600) + " horas/dia | Dias ativos: " + totalDays
-                        + " | Tempo de início: " + totalStartTime + " | Tempo de fim: " + totalEndTime));
-            }
+            } 
         }
     }
 
