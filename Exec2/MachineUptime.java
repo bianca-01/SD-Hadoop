@@ -31,6 +31,8 @@ public class MachineUptime {
     }
 
     public static class Reduce extends MapReduceBase implements Reducer<Text, Text, Text, Text> {
+        private static int outOfRangeCount = 0;
+        
         public void reduce(Text key, Iterator<Text> values, OutputCollector<Text, Text> output, Reporter reporter) throws IOException {
             long totalTime = 0;
             long minStartTime = Long.MAX_VALUE;
@@ -67,6 +69,22 @@ public class MachineUptime {
                 output.collect(key, new Text(machineName + " | Tempo médio: " + (avgTimePerDay / 3600) + " horas/dia | Dias ativos: " + totalDays
                         + " | Tempo de início: " + totalStartTime + " | Tempo de fim: " + totalEndTime));
             } 
+            else {
+                synchronized (Reduce.class) {
+                    outOfRangeCount++;
+                }
+            }
+        }
+
+        @Override
+        public void close() throws IOException {
+            OutputCollector<Text, Text> output = new OutputCollector<Text, Text>() {
+                @Override
+                public void collect(Text key, Text value) throws IOException {
+                    System.out.println(key.toString() + "\t" + value.toString());
+                }
+            };
+            output.collect(new Text("Maquinas fora do intervalo: "), new Text(String.valueOf(outOfRangeCount)));
         }
     }
 
