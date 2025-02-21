@@ -74,18 +74,12 @@ public class MachineUptime {
                     outOfRangeCount++;
                 }
             }
-        }
-
-        @Override
-        public void close() throws IOException {
-            OutputCollector<Text, Text> output = new OutputCollector<Text, Text>() {
-                @Override
-                public void collect(Text key, Text value) throws IOException {
-                    System.out.println(key.toString() + "\t" + value.toString());
-                }
-            };
+        
             output.collect(new Text("Maquinas fora do intervalo: "), new Text(String.valueOf(outOfRangeCount)));
         }
+
+        
+        
     }
 
 
