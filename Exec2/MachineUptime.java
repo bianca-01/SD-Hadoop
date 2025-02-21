@@ -32,8 +32,8 @@ public class MachineUptime {
     }
 
     public static class Reduce extends MapReduceBase implements Reducer<Text, Text, Text, Text> {
-        public enum Counter {
-            OUT_OF_RANGE_COUNT
+        public static enum Counter {
+            OUT_OF_RANGE_MACHINES
         }
 
         
@@ -74,7 +74,7 @@ public class MachineUptime {
                         + " | Tempo de inicio: " + totalStartTime + " | Tempo de fim: " + totalEndTime));
             } 
             else {
-                reporter.incrCounter(Counter.OUT_OF_RANGE_COUNT, 1);
+                reporter.incrCounter(Counter.OUT_OF_RANGE_MACHINES, 1);
             }
         
         }
@@ -106,6 +106,7 @@ public class MachineUptime {
         FileInputFormat.setInputPaths(conf, new Path(args[0]));
         FileOutputFormat.setOutputPath(conf, new Path(args[1]));
 
-        JobClient.runJob(conf);
+        RunningJob job = JobClient.runJob(conf);
+        System.out.println("Maquinas fora do intervalo: " + job.getCounters().findCounter(Reduce.Counter.OUT_OF_RANGE_MACHINES).getValue());
     }
 }
