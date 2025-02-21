@@ -4,6 +4,7 @@ import java.util.*;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapred.*;
+import org.w3c.dom.css.Counter;
 
 public class MachineUptime {
 
@@ -31,7 +32,10 @@ public class MachineUptime {
     }
 
     public static class Reduce extends MapReduceBase implements Reducer<Text, Text, Text, Text> {
-        private static int outOfRangeCount = 0;
+        public enum Counter {
+            OUT_OF_RANGE_COUNT
+        }
+
         
         public void reduce(Text key, Iterator<Text> values, OutputCollector<Text, Text> output, Reporter reporter) throws IOException {
             long totalTime = 0;
@@ -70,15 +74,10 @@ public class MachineUptime {
                         + " | Tempo de inicio: " + totalStartTime + " | Tempo de fim: " + totalEndTime));
             } 
             else {
-                synchronized (Reduce.class) {
-                    outOfRangeCount++;
-                }
+                reporter.incrCounter(Counter.OUT_OF_RANGE_COUNT, 1);
             }
         
-            output.collect(new Text("Maquinas fora do intervalo: "), new Text(String.valueOf(outOfRangeCount)));
         }
-
-        
         
     }
 
