@@ -66,8 +66,8 @@ public class MachineUptime {
             double avgTimePerDay = totalDays > 0 ? (double) totalTime / totalDays : 0;
 
             if (totalDays >= 300 && avgTimePerDay >= 3600) {
-                output.collect(key, new Text(machineName + " | Tempo médio: " + (avgTimePerDay / 3600) + " horas/dia | Dias ativos: " + totalDays
-                        + " | Tempo de início: " + totalStartTime + " | Tempo de fim: " + totalEndTime));
+                output.collect(key, new Text(machineName + " | Tempo medio: " + (avgTimePerDay / 3600) + " horas/dia | Dias ativos: " + totalDays
+                        + " | Tempo de inicio: " + totalStartTime + " | Tempo de fim: " + totalEndTime));
             } 
             else {
                 synchronized (Reduce.class) {
